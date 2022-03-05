@@ -210,11 +210,21 @@ sudo iptables-save > /etc/iptables/rules.v4
 ```sh
 sudo /usr/bin/certgen <common-name> <email@addre.ss>
 ```
-Адрес электронной почты должен иметь валидный формат. Адреса почты могут повторяться на одном сервере, но имена Common Name - нет. При необходимости обновить ключ устройства с тем же Common Name, его нужно отозвать, а затем создать заново.
+Адрес электронной почты должен иметь валидный формат. Адреса почты могут повторяться на одном сервере, но имена **Common Name** - нет. При необходимости обновить ключ устройства с тем же **Common Name**, его нужно отозвать, а затем создать заново.
 
 Имя Common Name используется для отзыва ключа так:
 ```sh
 sudo /usr/bin/certrevoke <common-name>
 sudo service openvpn restart
 ```
+
+## Необходимые приложения
+В таблице ниже перечислены ссылки на приложения, необходимые для загрузки и использования полученных ключей на пользовательских устройствах. На Linux-системах, основанных на Ubuntu, импорт ключей можно сделать прямо из селектора сетевых соединений.
+
+|**Приложение**|**ОС**|**URL**|
+|--------------|------|-------|
+| OpenVPN Connect | Android | https://play.google.com/store/apps/details?id=net.openvpn.openvpn |
+| OpenVPN Connect | iOS | https://apps.apple.com/us/app/openvpn-connect/id590379981 |
+| OpenVPN Macintosh | MacOS | https://openvpn.net/client-connect-vpn-for-mac-os/ |
+| OpenVPN Connect | Windows | https://openvpn.net/client-connect-vpn-for-windows/ |
 
