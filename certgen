@@ -1,0 +1,120 @@
+#!/bin/bash
+
+AUTHORITY_DIR="/etc/openvpn/pki/keys"
+
+CA_CERT="${AUTHORITY_DIR}/ca.crt"
+CA_KEY="${AUTHORITY_DIR}/private/ca.key"
+EXT_USERS_DB="${AUTHORITY_DIR}/ext_machines.db"
+TLS_KEY_FILE="${AUTHORITY_DIR}/ta.key"
+ACTIVE_DIR="${AUTHORITY_DIR}/active-users"
+ISSUED_DIR="${AUTHORITY_DIR}/issued"
+REQUEST_DIR="${AUTHORITY_DIR}/reqs"
+
+OPERATION_COUNTRY="IT"
+OPERATION_REGION="TS"
+OPERATION_CITY="Trieste"
+OPERATION_ORG="Orange Pi Home Trieste"
+OPERATION_UNIT="Orange Pi VPN"
+CERT_KEYLEN=4096
+CERT_EXPIRATION=3650
+
+AUTH_DOMAIN="twdragon-it.ddns.net"
+AUTH_PORT="59950"
+
+function show_help()
+{
+cat<<EOF
+
+OpenVPN certificate generator tool
+
+Usage: certgen "username" "email@doma.in"
+
+EOF
+}
+
+if [[ -z $1 ]]
+then
+    echo -e "Please specify username!\n"
+    show_help
+    exit 1
+fi
+
+if [[ -z $2 ]]
+then
+    echo -e "Please specify email!\n"
+    show_help
+    exit 1
+fi
+
+USER_EMAIL="$2"
+
+if [[ "$USER_EMAIL" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$ ]]
+then
+    echo -e "\t Valid email detected: $USER_EMAIL"
+else 
+    echo -e "Invalid email!"
+    exit 1
+fi
+
+MACHINE_COMMON_NAME="$1"
+CERT_SUBJ="/C=$OPERATION_COUNTRY/ST=$OPERATION_REGION/L=$OPERATION_CITY/O=$OPERATION_ORG/OU=$OPERATION_UNIT/CN=$MACHINE_COMMON_NAME/emailAddress=$USER_EMAIL"
+
+if grep -q $MACHINE_COMMON_NAME $EXT_USERS_DB
+then
+    echo -e "Invalid username: user $MACHINE_COMMON_NAME already exists!"
+    exit 1
+else
+    echo -e "Valid username specified: user $MACHINE_COMMON_NAME recorded into database"
+    echo -e "$MACHINE_COMMON_NAME $USER_EMAIL" >> $EXT_USERS_DB
+fi
+
+printf "\nGeneration certificate for ${MACHINE_COMMON_NAME}...\n\n"
+ConfigFile=`mktemp`
+printf 'basicConstraints = CA:FALSE\nsubjectKeyIdentifier=hash\nauthorityKeyIdentifier=keyid' > ${ConfigFile}
+
+openssl genrsa -out ${MACHINE_COMMON_NAME}.key $CERT_KEYLEN
+openssl req  -new -key ${MACHINE_COMMON_NAME}.key -out ${MACHINE_COMMON_NAME}.csr -subj "$CERT_SUBJ"
+openssl x509 -req -extfile ${ConfigFile} -in ${MACHINE_COMMON_NAME}.csr -CA "$CA_CERT" -CAcreateserial -out ${MACHINE_COMMON_NAME}.crt -days $CERT_EXPIRATION -sha256 -CAkey "$CA_KEY"
+
+mv -v "${MACHINE_COMMON_NAME}.csr" "${REQUEST_DIR}/${MACHINE_COMMON_NAME}.req"
+rm -fv ${ConfigFile}
+
+printf "\nGenerating OpenVPN profile for ${MACHINE_COMMON_NAME}...\n"
+
+echo -e "remote ${AUTH_DOMAIN} ${AUTH_PORT}" > "$MACHINE_COMMON_NAME.ovpn"
+echo -e "client" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "dev tun" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "ping 10" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "proto udp" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "tls-client" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "remote-cert-tls server" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "verb 4" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "pull" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "auth SHA256" >> "$MACHINE_COMMON_NAME.ovpn"
+# echo -e "compress lz4-v2" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "cipher AES-256-CBC" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "user nobody" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e "group nogroup" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e 'key-direction 1' >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e '<ca>' >> "$MACHINE_COMMON_NAME.ovpn"
+cat "$CA_CERT" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e '</ca>' >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e '<cert>' >> "$MACHINE_COMMON_NAME.ovpn"
+cat "${MACHINE_COMMON_NAME}.crt" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e '</cert>' >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e '<key>' >> "$MACHINE_COMMON_NAME.ovpn"
+cat "${MACHINE_COMMON_NAME}.key" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e '</key>' >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e '<tls-auth>' >> "$MACHINE_COMMON_NAME.ovpn"
+cat "$TLS_KEY_FILE" >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e '</tls-auth>' >> "$MACHINE_COMMON_NAME.ovpn"
+
+echo -e 'script-security 2' >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e 'up /etc/openvpn/update-resolv-conf' >> "$MACHINE_COMMON_NAME.ovpn"
+echo -e 'down /etc/openvpn/update-resolv-conf' >> "$MACHINE_COMMON_NAME.ovpn"
+
+rm -fv "${MACHINE_COMMON_NAME}.key"
+mv -v "${MACHINE_COMMON_NAME}.crt" "${ACTIVE_DIR}/${MACHINE_COMMON_NAME}.crt"
+cp -v "${ACTIVE_DIR}/${MACHINE_COMMON_NAME}.crt" "${ISSUED_DIR}/${MACHINE_COMMON_NAME}.crt"
+
+exit 0

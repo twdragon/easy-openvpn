@@ -1,0 +1,59 @@
+#!/bin/bash
+
+AUTH_DIR="/etc/openvpn/pki/keys"
+PKI_CENTRAL_DIR="/etc/openvpn/pki"
+
+EXT_USERS_DB="${AUTH_DIR}/ext_machines.db"
+ACTIVE_USERS_DIR="${AUTH_DIR}/active-users"
+ISSUED_DIR="${AUTH_DIR}/issued"
+
+
+function show_help()
+{
+cat<<EOF
+
+OpenVPN certificate revocation unit
+
+Usage: certrevoke "username"
+
+EOF
+}
+
+if [[ -z $1 ]]
+then
+    echo -e "Please specify username!\n"
+    show_help
+    exit 1
+fi
+
+MACHINE_COMMON_NAME="$1"
+
+if grep -q $MACHINE_COMMON_NAME $EXT_USERS_DB
+then
+    echo -e "Valid username specified: user $MACHINE_COMMON_NAME reported from database"
+else
+    echo -e "Invalid username: user $MACHINE_COMMON_NAME does not exist!"
+    exit 1
+fi
+
+if [[ -f "${ACTIVE_USERS_DIR}/${MACHINE_COMMON_NAME}.crt" && -f "${ISSUED_DIR}/${MACHINE_COMMON_NAME}.crt" ]]
+then
+    echo -e "User certificate file ${MACHINE_COMMON_NAME}.crt exists, clear to proceed"
+else
+    echo -e "Cannot find user certificate file ${MACHINE_COMMON_NAME}.crt, aborting"
+    exit 1
+fi
+
+#source ${PKI_CENTRAL_DIR}/../vars
+
+echo -e "yes\n" | ${PKI_CENTRAL_DIR}/easyrsa revoke "${MACHINE_COMMON_NAME}" 
+${PKI_CENTRAL_DIR}/easyrsa gen-crl
+
+rm -vf "${ACTIVE_USERS_DIR}/${MACHINE_COMMON_NAME}.crt"
+
+sed -i -e "/${MACHINE_COMMON_NAME}/d" ${EXT_USERS_DB}
+
+echo 'IMPORTANT!!! Please restart the OpenVPN server instance to ensure the certificate is now revoked!'
+
+exit 0
+
