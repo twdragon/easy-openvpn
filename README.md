@@ -18,6 +18,7 @@ apt install openvpn easy-rsa iptables-persistent
 ```sh
 mkdir /etc/openvpn/pki
 mkdir /etc/openvpn/pki/keys
+mkdir /etc/openvpn/pki/keys/active-users
 cp -vr /usr/share/easy-rsa/* /etc/openvpn/pki/
 cp -vr /etc/openvpn/pki/vars.example /etc/openvpn/pki/vars
 ```
