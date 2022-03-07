@@ -72,6 +72,7 @@ cd /etc/openvpn/pki
 ```sh
 ./easyrsa gen-dh
 openvpn --genkey --secret ../ta.key
+cp -v /etc/openvpn/pki/ta.key /etc/openvpn/pki/keys/ta.key
 cp -v keys/dh.pem ./
 ./easyrsa gen-crl
 ```
