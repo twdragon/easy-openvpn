@@ -180,7 +180,6 @@ sudo iptables -A FORWARD -i wlan0 -o tun+ -m state --state RELATED,ESTABLISHED -
 sudo iptables -A OUTPUT -o tun+ -j ACCEPT                                                   # 7
 sudo iptables -t nat -A POSTROUTING -s 10.8.0.0/16 -o wlan0 -j MASQUERADE                          # 8
 sudo iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -d 192.168.1.0/24 -j MASQUERADE                 # 9
-sudo iptables -A OUTPUT -o tun+ -j ACCEPT                                                   # 10
 ```
 Здесь нужно обратить особое внимание на правильность имен (контролируем последовательно по командам, подставляем имена, принятые в **нашей конкретной системе на конкретной машине**):
 - `wlan0` - имя сетевого интерфейса в системе
