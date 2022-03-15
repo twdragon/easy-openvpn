@@ -72,7 +72,7 @@ cd /etc/openvpn/pki
 В ответ на запрос сервера печатаем `yes` (обязательно полностью), после чего сертификат будет сгенерирован. Следующая операция потребует, скорее всего, довольно длительного времени. Генерируем ключ алгоритма Диффи-Хеллмана, шаблон списка отозванных сертификатов и усиленный ключ TLS для шифрования на серверной стороне:
 ```sh
 ./easyrsa gen-dh
-openvpn --genkey --secret ../ta.key
+openvpn --genkey --secret /etc/openvpn/pki/ta.key
 ln -s /etc/openvpn/pki/ta.key /etc/openvpn/pki/keys/ta.key
 cp -v keys/dh.pem ./
 ./easyrsa gen-crl
