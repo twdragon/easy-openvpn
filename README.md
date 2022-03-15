@@ -92,6 +92,7 @@ cert        /etc/openvpn/pki/keys/issued/server.crt
 key         /etc/openvpn/pki/keys/private/server.key
 dh          /etc/openvpn/pki/keys/dh.pem
 crl-verify  /etc/openvpn/pki/keys/crl.pem
+tls-auth    /etc/openvpn/pki/ta.key 0
 
 topology subnet         # Вид маршрутизации, только subnet
 
@@ -104,7 +105,7 @@ ifconfig-pool-persist /var/log/openvpn/ipp.txt
 # Выкладка маршрутов и адресов DNS-серверов, передаваемая клиенту
 push "route 10.8.0.0 255.255.0.0"
 route 10.8.0.0 255.255.0.0
-push "redirect-gateway local def1"
+push "redirect-gateway local def1 bypass-dhcp"
 push "dhcp-option DNS 1.1.1.1"
 push "dhcp-option DNS 8.8.8.8"
 push "dhcp-option DNS 8.8.4.4"
